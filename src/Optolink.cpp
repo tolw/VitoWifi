@@ -19,9 +19,8 @@ Optolink::Optolink():
   _debugPrinter(nullptr)
   {}
 
-
+/*
 //begin serial @ 4800 baud, 8 bits, even parity, 2 stop bits
-#ifdef USE_SOFTWARESERIAL
 void Optolink::begin(int8_t rx, int8_t tx) {
   SoftwareSerial* serial = new SoftwareSerial(rx, tx, false, 64);
   serial->begin(4800);
@@ -30,7 +29,7 @@ void Optolink::begin(int8_t rx, int8_t tx) {
   _stream = serial;
   //serial->flush();
 }
-#endif
+*/
 #ifdef ARDUINO_ARCH_ESP32
 void Optolink::begin(HardwareSerial* serial, int8_t rxPin, int8_t txPin) {
   serial->begin(4800, SERIAL_8E2, rxPin, txPin);
@@ -65,13 +64,15 @@ void Optolink::loop() {
 }
 
 
-//idle state, waiting for user action
+// idle state, waiting for sync from Vito
 void Optolink::_idleHandler() {
   if (_stream->available()) {
     if (_stream->read() == 0x05) {
       _lastMillis = millis();
       _state = SYNC;
+      _debugPrinter->println("0x05 received");
     }
+    _debugPrinter->println("something wrong received");
   }
   else if (_action == PROCESS && (millis() - _lastMillis < 20UL)) {  //try to send new request directly after previous one
     _state = SEND;
@@ -79,18 +80,24 @@ void Optolink::_idleHandler() {
 }
 
 
-//send SYNC (= initiator)
+// acknowledge SYNC
 void Optolink::_syncHandler() {
   const uint8_t buff[] = {0x01};
   _stream->write(buff, sizeof(buff));
   _lastMillis = millis();
-  if (_action = PROCESS)
+  if (_action = PROCESS) {
     _state = SEND;
-  else
+    _debugPrinter->println("0x01 sent, moving to SEND");
+    _sendHandler();
+  }
+  else {
     _state = IDLE;
+    _debugPrinter->println("0x01 sent, returning to IDLE");
+  }
 }
 
 
+//
 void Optolink::_sendHandler() {
   uint8_t buff[6];
   if (_writeMessageType) {
@@ -122,10 +129,7 @@ void Optolink::_sendHandler() {
   if (_writeMessageType) _debugPrinter->print(F("WRITE "));
   else _debugPrinter->print(F("READ"));
   _debugPrinter->print(F(" request on address "));
-  uint8_t address[2] = {0};  //initialize address array for debug printing
-  address[0] = _address & 0xFF;
-  address[1] = _address >> 8;
-  _printHex(_debugPrinter, address, 2);
+  _printHex(_debugPrinter, &buff[1], 2);
   _debugPrinter->print(F(", length "));
   _debugPrinter->println(_length);
 }

@@ -1,16 +1,12 @@
 #pragma once
 #include <Arduino.h>
 #include "Constants.h"
-#ifdef USE_SOFTWARESERIAL
-#include <SoftwareSerial.h>
-#endif
+//#include <SoftwareSerial.h>
 
 class Optolink {
   public:
     Optolink();
-    #ifdef USE_SOFTWARESERIAL
-    void begin(int8_t rx, int8_t tx);  //software serial
-    #endif
+    //void begin(int8_t rx, int8_t tx);  //software serial
     #ifdef ARDUINO_ARCH_ESP32
     void begin(HardwareSerial* serial, int8_t rxPin, int8_t txPin);  //ESP32
     #endif
