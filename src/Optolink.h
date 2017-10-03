@@ -27,15 +27,9 @@ class Optolink {
   private:
     Stream* _stream;
     enum OptolinkState: uint8_t {
-      RESET,
-      RESET_ACK,
-      INIT,
-      INIT_ACK,
       IDLE,
       SYNC,
-      SYNC_ACK,
       SEND,
-      SEND_ACK,
       RECEIVE
     } _state;
     enum OptolinkAction: uint8_t {
@@ -47,8 +41,8 @@ class Optolink {
     uint16_t _address;
     uint8_t _length;
     bool _writeMessageType;
-    uint8_t _value[4];
-    uint8_t _rcvBuffer[12];
+    uint8_t _value[2];
+    uint8_t _rcvBuffer[2];
     uint8_t _rcvBufferLen;
     uint8_t _rcvLen;
     uint32_t _lastMillis;
@@ -66,8 +60,6 @@ class Optolink {
     void _receiveHandler();
     void _returnHandler();
     bool _debugMessage;
-    inline uint8_t _calcChecksum(uint8_t array[], uint8_t length);
-    inline bool _checkChecksum(uint8_t array[], uint8_t length);
     inline void _printHex(Print* printer, uint8_t array[], uint8_t length);
     inline void _clearInputBuffer();
     Print* _debugPrinter;
