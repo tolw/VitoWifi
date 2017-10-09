@@ -16,13 +16,12 @@ VitoWifiClass::~VitoWifiClass() {
 
 
 //pass serial to Optolink
-/*
-//softwareserial
+#ifdef USE_SOFTWARESERIAL  //softwareserial
 void VitoWifiClass::setup(const int8_t rxPin, const int8_t txPin) {
   _optolink.begin(rxPin, txPin);
   _datapoints.shrink_to_fit();
 }
-*/
+#endif
 #ifdef ARDUINO_ARCH_ESP32  //esp32
 void VitoWifiClass::setup(HardwareSerial* serial, int8_t rxPin, int8_t txPin) {
   _optolink.begin(serial, rxPin, txPin);
@@ -52,8 +51,11 @@ Datapoint& VitoWifiClass::addDatapoint(const char* name, const char* group, cons
     case STAT :
       DP = new StatDP(name, group, address, isWriteable);
       break;
-    case COUNTL :
-      DP = new CountLDP(name, group, address, isWriteable);
+    case COUNT :
+      DP = new CountDP(name, group, address, isWriteable);
+      break;
+    case COUNTS :
+      DP = new CountSDP(name, group, address, isWriteable);
       break;
     case MODE :
       DP = new ModeDP(name, group, address, isWriteable);
@@ -149,7 +151,6 @@ void VitoWifiClass::loop(){
   if (!_queue.empty() && !_optolink.isBusy()) {
     if (_queue.front().write) _optolink.writeToDP(_queue.front().DP->getAddress(), _queue.front().DP->getLength(), _queue.front().value);
     else _optolink.readFromDP(_queue.front().DP->getAddress(), _queue.front().DP->getLength());
-    _logger.println(F("action passed to Optolink."));
     return;
   }
   if (_optolink.available() > 0) {  //trigger callback when ready and remove element from queue

@@ -43,6 +43,7 @@ and many others
 #pragma once
 #include <Arduino.h>
 #include <queue>
+#include "Config.h"
 #include "Constants.h"
 #include "Datapoint.h"
 #include "Optolink.h"
@@ -53,7 +54,9 @@ class VitoWifiClass {
   public:
     VitoWifiClass();
     ~VitoWifiClass();
-    //void setup(int8_t rxPin, int8_t txPin);  //Softwareserial
+    #ifdef USE_SOFTWARESERIAL
+    void setup(int8_t rxPin, int8_t txPin);
+    #endif
     #ifdef ARDUINO_ARCH_ESP32
     void setup(HardwareSerial* serial, int8_t rxPin, int8_t txPin);
     #endif
