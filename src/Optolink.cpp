@@ -11,7 +11,7 @@ Optolink::Optolink():
   _rcvBufferLen(0),
   _rcvLen(0),
   _debugMessage(true),
-  _state(IDLE),
+  _state(INIT),
   _action(WAIT),
   _lastMillis(0),
   _numberOfTries(5),
@@ -49,17 +49,42 @@ void Optolink::loop() {
     _state = IDLE;
     _action = RETURN_ERROR;
   }
-  if (_state == IDLE) {
+  else if (_state == INIT) {
+    _initHandler();
+  }
+  else if (_state == IDLE) {
     _idleHandler();
   }
-  if (_state == SYNC) {
+  /*
+  else if (_state == SYNC) {
     _syncHandler();
   }
-  if (_state == SEND) {
+  else if (_state == SEND) {
     _sendHandler();
   }
-  if (_state == RECEIVE) {
+  */
+  else if (_state == RECEIVE) {
     _receiveHandler();
+  }
+}
+
+
+// reset new devices to KW state by sending 0x04.
+void Optolink::_initHandler() {
+  if (_stream->available()) {
+    if(_stream->peek() == 0x05) {
+      _state = IDLE;
+      _idleHandler();
+      _debugPrinter->println("INIT done.");
+    }
+    else _stream->read();
+  }
+  else {
+    if (millis() - _lastMillis > 1000UL) {
+      _lastMillis = millis();
+      const uint8_t buff[] = {0x04};
+      _stream->write(buff, 1);
+    }
   }
 }
 
@@ -69,33 +94,32 @@ void Optolink::_idleHandler() {
   if (_stream->available()) {
     if (_stream->read() == 0x05) {
       _lastMillis = millis();
-      _state = SYNC;
       _debugPrinter->println("0x05 received");
+      if (_action == PROCESS) {
+        _state = SYNC;
+        _syncHandler();
+      }
     }
-    _debugPrinter->println("something wrong received");
+    else _debugPrinter->println("something wrong received");
   }
-  else if (_action == PROCESS && (millis() - _lastMillis < 20UL)) {  //try to send new request directly after previous one
+  else if (_action == PROCESS && (millis() - _lastMillis < 10UL)) {  // don't wait for 0x05 sync signal, send directly after last request
     _state = SEND;
-  }
-}
-
-
-// acknowledge SYNC
-void Optolink::_syncHandler() {
-  const uint8_t buff[] = {0x01};
-  _stream->write(buff, sizeof(buff));
-  _lastMillis = millis();
-  if (_action = PROCESS) {
-    _state = SEND;
-    _debugPrinter->println("0x01 sent, moving to SEND");
     _sendHandler();
   }
-  else {
+  else if (millis() - _lastMillis > 10 * 1000UL) {
     _state = IDLE;
-    _debugPrinter->println("0x01 sent, returning to IDLE");
+    _errorCode = 1;
+    --_numberOfTries;
   }
 }
 
+
+void Optolink::_syncHandler() {
+  const uint8_t buff[1] = {0x01};
+  _stream->write(buff, 1);
+  _state = SEND;
+  _sendHandler();
+}
 
 //
 void Optolink::_sendHandler() {
@@ -122,8 +146,8 @@ void Optolink::_sendHandler() {
     _rcvLen = _length;
     _stream->write(buff, 4);
   }
+  _clearInputBuffer();
   _rcvBufferLen = 0;
-  _lastMillis = millis();
   --_numberOfTries;
   _state = RECEIVE;
   if (_writeMessageType) _debugPrinter->print(F("WRITE "));
@@ -135,7 +159,6 @@ void Optolink::_sendHandler() {
 }
 
 
-
 void Optolink::_receiveHandler() {
   while (_stream->available() > 0) {  //while instead of if: read complete RX buffer
     _rcvBuffer[_rcvBufferLen] = _stream->read();
@@ -144,15 +167,17 @@ void Optolink::_receiveHandler() {
   if (_rcvBufferLen == _rcvLen) {  //message complete, check message
     _state = IDLE;
     _action = RETURN;
+    _lastMillis = millis();
     _errorCode = 0;  //succes
     _debugPrinter->println(F("succes"));
     return;
   }
-  if (millis() - _lastMillis > 10 * 1000UL) {  //Vitotronic isn't answering, try again
+  else if (millis() - _lastMillis > 10 * 1000UL) {  //Vitotronic isn't answering, try again
     _rcvBufferLen = 0;
     _errorCode = 1;  //Connection error
     memset(_rcvBuffer, 0, 2);
-    _state = SYNC;
+    _state = IDLE;
+    _action = RETURN_ERROR;
   }
 }
 

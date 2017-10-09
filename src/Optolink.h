@@ -23,6 +23,7 @@ class Optolink {
   private:
     Stream* _stream;
     enum OptolinkState: uint8_t {
+      INIT,  //for devices compatible with P300
       IDLE,
       SYNC,
       SEND,
@@ -44,17 +45,11 @@ class Optolink {
     uint32_t _lastMillis;
     uint8_t _numberOfTries;
     uint8_t _errorCode;
-    void _resetHandler();
-    void _resetAckHandler();
     void _initHandler();
-    void _initAckHandler();
     void _idleHandler();
     void _syncHandler();
-    void _syncAckHandler();
     void _sendHandler();
-    void _sendAckHandler();
     void _receiveHandler();
-    void _returnHandler();
     bool _debugMessage;
     inline void _printHex(Print* printer, uint8_t array[], uint8_t length);
     inline void _clearInputBuffer();

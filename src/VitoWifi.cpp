@@ -44,36 +44,23 @@ void VitoWifiClass::setGlobalCallback(GlobalCallbackFunction globalCallback) {
 
 
 Datapoint& VitoWifiClass::addDatapoint(const char* name, const char* group, const uint16_t address, const DPType type, bool isWriteable) {
+  Datapoint* DP;
   switch (type) {
     case TEMP :
-    {
-      Datapoint* tempDP = new TempDP(name, group, address, isWriteable);
-      if (!tempDP) {  abort(); }  //out of memory
-      _datapoints.push_back(tempDP);
+      DP = new TempDP(name, group, address, isWriteable);
       break;
-    }
     case STAT :
-    {
-      Datapoint* statDP = new StatDP(name, group, address, isWriteable);
-      if (!statDP) { abort(); }  //out of memory
-      _datapoints.push_back(statDP);
+      DP = new StatDP(name, group, address, isWriteable);
       break;
-    }
     case COUNTL :
-    {
-      Datapoint* countLDP = new CountLDP(name, group, address, isWriteable);
-      if (!countLDP) { abort(); }  //out of memory
-      _datapoints.push_back(countLDP);
+      DP = new CountLDP(name, group, address, isWriteable);
       break;
-    }
     case MODE :
-    {
-      Datapoint* modeDP = new ModeDP(name, group, address, isWriteable);
-      if (!modeDP) { abort(); }  //out of memory
-      _datapoints.push_back(modeDP);
+      DP = new ModeDP(name, group, address, isWriteable);
       break;
-    }
   }
+  if (!DP) abort();  //out of memory?
+  _datapoints.push_back(DP);
   return *_datapoints.back();
 }
 
